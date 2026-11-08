@@ -1,3 +1,4 @@
+const path = require('path');
 const express = require('express');
 const db = require('../config/db');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
@@ -12,7 +13,9 @@ router.get('/users', guard, async (req, res) => {
       ? req.query.status
       : 'pending';
     const { rows } = await db.query(
-      `SELECT id, phone, full_name, city, vehicle_plate, status, created_at
+      `SELECT id, phone, full_name, username, city, vehicle_plate, status, created_at,
+              (id_doc_file IS NOT NULL) AS has_id_doc,
+              (sheba IS NOT NULL) AS has_bank
        FROM users
        WHERE role = 'courier' AND status = $1
          AND ($1 <> 'pending' OR full_name IS NOT NULL)
@@ -47,6 +50,23 @@ function setUserStatus(to) {
 }
 router.post('/users/:id/approve', guard, setUserStatus('approved'));
 router.post('/users/:id/reject', guard, setUserStatus('rejected'));
+
+router.get('/users/:id/id-document', guard, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id)) return res.status(400).json({ error: 'invalid_input' });
+    const { rows } = await db.query('SELECT id_doc_file FROM users WHERE id = $1', [id]);
+    const f = rows[0] && rows[0].id_doc_file;
+    if (!f || !/^[\w.-]+$/.test(f)) return res.status(404).json({ error: 'not_found' });
+    const { UPLOAD_DIR } = require('./users');
+    res.set('Cache-Control', 'no-store');
+    res.sendFile(path.join(UPLOAD_DIR, f), (err) => {
+      if (err && !res.headersSent) res.status(404).json({ error: 'not_found' });
+    });
+  } catch (e) {
+    res.status(500).json({ error: 'server_error' });
+  }
+});
 
 // ---------- Zones ----------
 function num(v) {
@@ -121,13 +141,20 @@ const LIMITS = {
   idle_minutes: [5, 240],
   idle_radius_m: [10, 500],
   min_settlement_toman: [0, 100000000],
+  ad_price_busy: [0, 1000000000],
+  ad_price_normal: [0, 1000000000],
+  ad_price_low: [0, 1000000000],
 };
+const TEXT_KEYS = { support_whatsapp: /^\+?\d{0,15}$/ };
 
 router.get('/settings', guard, async (req, res) => {
   try {
     const { rows } = await db.query('SELECT key, value FROM settings');
     const out = {};
-    for (const r of rows) if (LIMITS[r.key]) out[r.key] = Number(r.value);
+    for (const r of rows) {
+      if (LIMITS[r.key]) out[r.key] = Number(r.value);
+      else if (TEXT_KEYS[r.key]) out[r.key] = r.value;
+    }
     res.json({ settings: out });
   } catch (e) {
     res.status(500).json({ error: 'server_error' });
@@ -136,9 +163,17 @@ router.get('/settings', guard, async (req, res) => {
 
 router.put('/settings', guard, async (req, res) => {
   try {
-    const entries = Object.entries(req.body || {}).filter(([k]) => LIMITS[k]);
+    const entries = Object.entries(req.body || {}).filter(
+      ([k]) => LIMITS[k] || TEXT_KEYS[k]
+    );
     if (entries.length === 0) return res.status(400).json({ error: 'invalid_input' });
     for (const [k, v] of entries) {
+      if (TEXT_KEYS[k]) {
+        if (!TEXT_KEYS[k].test(String(v ?? '').trim())) {
+          return res.status(400).json({ error: 'invalid_input', field: k });
+        }
+        continue;
+      }
       const n = num(v);
       const [min, max] = LIMITS[k];
       if (!Number.isInteger(n) || n < min || n > max) {
@@ -150,7 +185,7 @@ router.put('/settings', guard, async (req, res) => {
         await c.query(
           `INSERT INTO settings (key, value) VALUES ($1, $2)
            ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
-          [k, String(num(v))]
+          [k, TEXT_KEYS[k] ? String(v ?? '').trim() : String(num(v))]
         );
       }
     });

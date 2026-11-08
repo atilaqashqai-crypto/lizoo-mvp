@@ -1,6 +1,19 @@
 let token = localStorage.getItem('lizoo_token');
 let courierFilter = 'pending';
 let settleFilter = 'pending';
+let adFilter = 'pending';
+const LOC = { busy: 'پرتردد', normal: 'معمولی', low: 'کم‌تردد' };
+
+async function openDoc(userId) {
+  try {
+    const res = await fetch(`/admin/users/${userId}/id-document`, {
+      headers: { Authorization: 'Bearer ' + token },
+    });
+    if (!res.ok) return alert('مدرکی پیدا نشد');
+    const blob = await res.blob();
+    window.open(URL.createObjectURL(blob), '_blank');
+  } catch (e) { alert('خطا در دریافت مدرک'); }
+}
 
 const $ = (s) => document.querySelector(s);
 const fmt = (n) => Number(n || 0).toLocaleString('fa-IR');
@@ -77,12 +90,13 @@ const views = {
       courierFilter, (v) => { courierFilter = v; show('couriers'); }));
     if (!users.length) return root.append(el('p', {}, 'موردی نیست'));
     root.append(table(
-      ['نام', 'موبایل', 'شهر', 'پلاک', 'تاریخ', 'عملیات'],
+      ['نام', 'نام کاربری', 'موبایل', 'شهر', 'پلاک', 'مدرک', 'بانک', 'تاریخ', 'عملیات'],
       users.map((u) => {
         const ok = el('button', { class: 'ok', onclick: () => act(`/admin/users/${u.id}/approve`, {}, 'couriers') }, 'تأیید');
         const no = el('button', { class: 'bad', onclick: () => act(`/admin/users/${u.id}/reject`, {}, 'couriers') }, 'رد');
         const btns = u.status === 'pending' ? [ok, no] : u.status === 'approved' ? [no] : [ok];
-        return [u.full_name || '-', u.phone, u.city || '-', u.vehicle_plate || '-', fmtDate(u.created_at), el('div', { class: 'row' }, btns)];
+        const doc = u.has_id_doc ? el('button', { onclick: () => openDoc(u.id) }, 'مشاهده') : '-';
+        return [u.full_name || '-', u.username || '-', u.phone, u.city || '-', u.vehicle_plate || '-', doc, u.has_bank ? '✓' : '-', fmtDate(u.created_at), el('div', { class: 'row' }, btns)];
       })));
   },
 
@@ -93,7 +107,7 @@ const views = {
       settleFilter, (v) => { settleFilter = v; show('settlements'); }));
     if (!settlements.length) return root.append(el('p', {}, 'موردی نیست'));
     root.append(table(
-      ['پیک', 'موبایل', 'مبلغ (تومان)', 'تاریخ درخواست', 'عملیات'],
+      ['پیک', 'موبایل', 'مبلغ (تومان)', 'شبا', 'شماره کارت', 'تاریخ درخواست', 'عملیات'],
       settlements.map((s) => {
         const approve = el('button', { class: 'ok', onclick: () => act(`/admin/settlements/${s.id}/approve`, {}, 'settlements') }, 'تأیید');
         const pay = el('button', { class: 'pri', onclick: () => {
@@ -105,7 +119,30 @@ const views = {
           act(`/admin/settlements/${s.id}/reject`, note ? { note } : {}, 'settlements');
         } }, 'رد');
         const btns = s.status === 'pending' ? [approve, reject] : s.status === 'approved' ? [pay, reject] : [];
-        return [s.full_name || '-', s.phone, fmt(s.amount_toman), fmtDate(s.requested_at), el('div', { class: 'row' }, btns)];
+        return [s.full_name || '-', s.phone, fmt(s.amount_toman), el('span', { dir: 'ltr' }, s.sheba || '-'), el('span', { dir: 'ltr' }, s.card_number || '-'), fmtDate(s.requested_at), el('div', { class: 'row' }, btns)];
+      })));
+  },
+
+  async ads(root) {
+    const { orders } = await api('/admin/ads?status=' + adFilter);
+    root.append(filterSelect(
+      [['pending', 'در انتظار تایید پرداخت'], ['confirmed', 'تأییدشده'], ['rejected', 'ردشده']],
+      adFilter, (v) => { adFilter = v; show('ads'); }));
+    if (!orders.length) return root.append(el('p', {}, 'موردی نیست'));
+    root.append(table(
+      ['تبلیغ‌دهنده', 'تماس', 'تعداد باکس', 'محل', 'مبلغ کل (تومان)', 'تاریخ', 'عملیات'],
+      orders.map((o) => {
+        const ok = el('button', { class: 'ok', onclick: () => {
+          if (confirm('واریز این سفارش تایید شد؟')) act(`/admin/ads/${o.id}/confirm`, {}, 'ads');
+        } }, 'تایید پرداخت');
+        const no = el('button', { class: 'bad', onclick: () => {
+          const note = prompt('دلیل رد (اختیاری)');
+          if (note === null) return;
+          act(`/admin/ads/${o.id}/reject`, note ? { note } : {}, 'ads');
+        } }, 'رد');
+        return [o.advertiser_name, o.contact_phone, fmt(o.boxes_count), LOC[o.location_type] || o.location_type,
+          fmt(o.total_price_toman), fmtDate(o.created_at),
+          el('div', { class: 'row' }, o.status === 'pending' ? [ok, no] : [])];
       })));
   },
 
@@ -159,10 +196,15 @@ const views = {
       ['idle_minutes', 'قطع خودکار بعد از (دقیقه)'],
       ['idle_radius_m', 'شعاع ثابت‌ماندن (متر)'],
       ['min_settlement_toman', 'حداقل مبلغ تسویه (تومان)'],
+      ['ad_price_busy', 'قیمت هر باکس تبلیغاتی: منطقه پرتردد (تومان)'],
+      ['ad_price_normal', 'قیمت هر باکس تبلیغاتی: منطقه معمولی (تومان)'],
+      ['ad_price_low', 'قیمت هر باکس تبلیغاتی: منطقه کم‌تردد (تومان)'],
+      ['support_whatsapp', 'شماره واتساپ پشتیبانی (مثلاً 98912xxxxxxx)', 'text'],
     ];
     const inputs = {};
-    for (const [k, label] of fields) {
-      inputs[k] = el('input', { type: 'number', value: settings[k] });
+    for (const [k, label, kind] of fields) {
+      inputs[k] = el('input', { type: kind || 'number', value: settings[k] ?? '' });
+      if (kind === 'text') inputs[k].setAttribute('dir', 'ltr');
       root.append(el('label', {}, label), inputs[k]);
     }
     root.append(el('div', { class: 'row' }, el('button', { class: 'pri', onclick: async () => {
@@ -176,7 +218,7 @@ const views = {
 
 const tabs = [
   ['stats', 'خانه'], ['couriers', 'پیک‌ها'], ['settlements', 'تسویه‌ها'],
-  ['zones', 'مناطق'], ['settings', 'تنظیمات'],
+  ['ads', 'سفارش تبلیغ'], ['zones', 'مناطق'], ['settings', 'تنظیمات'],
 ];
 
 async function show(name) {

@@ -7,7 +7,7 @@ async function getSettings(client = db) {
     baseRate: Number(m.base_rate_toman || 40000),
     idleMinutes: Number(m.idle_minutes || 30),
     idleRadiusM: Number(m.idle_radius_m || 50),
-    minSettlement: Number(m.min_settlement_toman || 100000),
+    minSettlement: Number(m.min_settlement_toman || 1000000),
   };
 }
 

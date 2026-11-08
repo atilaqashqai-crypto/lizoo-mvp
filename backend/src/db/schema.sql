@@ -85,5 +85,49 @@ INSERT INTO settings (key, value) VALUES
   ('base_rate_toman', '40000'),
   ('idle_minutes', '30'),
   ('idle_radius_m', '50'),
-  ('min_settlement_toman', '100000')
+  ('min_settlement_toman', '1000000'),
+  ('ad_price_busy', '5000000'),
+  ('ad_price_normal', '3000000'),
+  ('ad_price_low', '1500000'),
+  ('support_whatsapp', '')
 ON CONFLICT (key) DO NOTHING;
+
+-- ===== v2 =====
+ALTER TABLE users ADD COLUMN IF NOT EXISTS username    VARCHAR(40);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS id_doc_file VARCHAR(80);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS sheba       VARCHAR(26);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS card_number VARCHAR(16);
+CREATE UNIQUE INDEX IF NOT EXISTS uniq_username
+  ON users (lower(username)) WHERE username IS NOT NULL;
+
+ALTER TABLE settlements ADD COLUMN IF NOT EXISTS sheba       VARCHAR(26);
+ALTER TABLE settlements ADD COLUMN IF NOT EXISTS card_number VARCHAR(16);
+
+CREATE TABLE IF NOT EXISTS ad_orders (
+  id                BIGSERIAL PRIMARY KEY,
+  user_id           BIGINT NOT NULL REFERENCES users(id),
+  advertiser_name   VARCHAR(120) NOT NULL,
+  contact_phone     VARCHAR(15) NOT NULL,
+  boxes_count       INT NOT NULL CHECK (boxes_count > 0),
+  location_type     VARCHAR(10) NOT NULL
+                    CHECK (location_type IN ('busy', 'normal', 'low')),
+  unit_price_toman  BIGINT NOT NULL,
+  total_price_toman BIGINT NOT NULL,
+  status            VARCHAR(10) NOT NULL DEFAULT 'pending'
+                    CHECK (status IN ('pending', 'confirmed', 'rejected')),
+  note              TEXT,
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+  reviewed_at       TIMESTAMPTZ,
+  reviewed_by       BIGINT REFERENCES users(id)
+);
+CREATE INDEX IF NOT EXISTS idx_ads_status ON ad_orders (status, created_at DESC);
+
+-- one-time: raise the old default minimum settlement to 1,000,000 toman
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM settings WHERE key = 'migr_v2') THEN
+    UPDATE settings SET value = '1000000'
+      WHERE key = 'min_settlement_toman' AND value = '100000';
+    INSERT INTO settings (key, value) VALUES ('migr_v2', '1');
+  END IF;
+END $$;

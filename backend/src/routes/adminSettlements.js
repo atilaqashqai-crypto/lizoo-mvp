@@ -9,7 +9,7 @@ router.get('/', async (req, res) => {
   try {
     const status = req.query.status || 'pending';
     const { rows } = await db.query(
-      `SELECT s.*, u.full_name, u.phone
+      `SELECT s.*, u.full_name, u.phone, u.username
        FROM settlements s JOIN users u ON u.id = s.user_id
        WHERE s.status = $1
        ORDER BY s.requested_at ASC LIMIT 200`,

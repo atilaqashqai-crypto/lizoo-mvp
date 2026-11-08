@@ -86,7 +86,7 @@ router.post('/verify-otp', async (req, res) => {
     const user = up.rows[0];
 
     const token = jwt.sign({ sub: user.id, role: user.role }, process.env.JWT_SECRET, {
-      expiresIn: process.env.JWT_EXPIRES_IN || '30d',
+      expiresIn: process.env.JWT_EXPIRES_IN || '365d',
     });
 
     res.json({ token, user: publicUser(user) });
@@ -103,6 +103,11 @@ function publicUser(u) {
     full_name: u.full_name,
     city: u.city,
     vehicle_plate: u.vehicle_plate,
+    username: u.username || null,
+    has_bank: Boolean(u.sheba && u.card_number),
+    has_id_doc: Boolean(u.id_doc_file),
+    sheba_last4: u.sheba ? u.sheba.slice(-4) : null,
+    card_last4: u.card_number ? u.card_number.slice(-4) : null,
     role: u.role,
     status: u.status,
     profile_complete: Boolean(u.full_name && u.city && u.vehicle_plate),

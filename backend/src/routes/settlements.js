@@ -11,6 +11,9 @@ router.post('/request', async (req, res) => {
   try {
     const result = await db.withTx(async (c) => {
       await c.query('SELECT id FROM users WHERE id = $1 FOR UPDATE', [req.user.id]);
+      const u = (await c.query('SELECT sheba, card_number, id_doc_file FROM users WHERE id = $1', [req.user.id])).rows[0];
+      if (!u.id_doc_file) return { code: 400, body: { error: 'id_document_required' } };
+      if (!u.sheba || !u.card_number) return { code: 400, body: { error: 'bank_info_required' } };
       const s = await getSettings(c);
       const b = await getBalance(c, req.user.id);
 
@@ -31,9 +34,9 @@ router.post('/request', async (req, res) => {
       }
 
       const ins = await c.query(
-        `INSERT INTO settlements (user_id, amount_toman)
-         VALUES ($1, $2) RETURNING *`,
-        [req.user.id, amount]
+        `INSERT INTO settlements (user_id, amount_toman, sheba, card_number)
+         VALUES ($1, $2, $3, $4) RETURNING *`,
+        [req.user.id, amount, u.sheba, u.card_number]
       );
       return { code: 201, body: { settlement: ins.rows[0] } };
     });

@@ -16,6 +16,7 @@ app.use(
   })
 );
 app.use(cors());
+app.use('/users/me/id-document', express.json({ limit: '9mb' }));
 app.use(express.json({ limit: '1mb' }));
 
 app.use('/panel', express.static(path.join(__dirname, '..', 'public')));
@@ -41,6 +42,8 @@ app.use('/users', require('./routes/users'));
 app.use('/activities', require('./routes/activities'));
 app.use('/earnings', require('./routes/earnings'));
 app.use('/settlements', require('./routes/settlements'));
+app.use('/ads', require('./routes/ads'));
+app.use('/admin/ads', require('./routes/adminAds'));
 app.use('/admin/settlements', require('./routes/adminSettlements'));
 app.use('/admin', require('./routes/admin'));
 
