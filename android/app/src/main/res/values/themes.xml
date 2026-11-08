@@ -1,3 +1,7 @@
 <resources>
-    <style name="Theme.Lizoo" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.Lizoo" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">#0A1020</item>
+        <item name="android:statusBarColor">#0A1020</item>
+        <item name="android:navigationBarColor">#111A2E</item>
+    </style>
 </resources>

@@ -23,6 +23,11 @@ data class UserDto(
     @SerializedName("full_name") val fullName: String?,
     val city: String?,
     @SerializedName("vehicle_plate") val vehiclePlate: String?,
+    val username: String?,
+    @SerializedName("has_bank") val hasBank: Boolean,
+    @SerializedName("has_id_doc") val hasIdDoc: Boolean,
+    @SerializedName("sheba_last4") val shebaLast4: String?,
+    @SerializedName("card_last4") val cardLast4: String?,
     val role: String,
     val status: String,
     @SerializedName("profile_complete") val profileComplete: Boolean
@@ -35,7 +40,8 @@ data class UserResponse(val user: UserDto)
 data class ProfileBody(
     @SerializedName("full_name") val fullName: String,
     val city: String,
-    @SerializedName("vehicle_plate") val vehiclePlate: String
+    @SerializedName("vehicle_plate") val vehiclePlate: String,
+    val username: String? = null
 )
 
 data class ErrorBody(
@@ -94,6 +100,53 @@ data class SettlementResponse(val settlement: SettlementDto)
 // amount = null -> whole available balance (Gson omits null fields)
 class SettlementRequestBody(val amount: Long? = null)
 
+data class BankBody(
+    val sheba: String,
+    @SerializedName("card_number") val cardNumber: String
+)
+
+data class DocBody(@SerializedName("image_base64") val imageBase64: String)
+
+data class DayDto(val day: String, val toman: Long, val seconds: Long)
+
+data class WeekDto(
+    val days: List<DayDto>,
+    @SerializedName("total_toman") val totalToman: Long,
+    @SerializedName("total_seconds") val totalSeconds: Long
+)
+
+data class AdPricesDto(
+    val prices: Map<String, Long>,
+    @SerializedName("support_whatsapp") val supportWhatsapp: String?,
+    @SerializedName("payment_info") val paymentInfo: String?
+)
+
+data class AdOrderBody(
+    @SerializedName("advertiser_name") val advertiserName: String,
+    @SerializedName("contact_phone") val contactPhone: String,
+    @SerializedName("boxes_count") val boxesCount: Int,
+    @SerializedName("location_type") val locationType: String
+)
+
+data class AdOrderDto(
+    val id: Long,
+    @SerializedName("advertiser_name") val advertiserName: String,
+    @SerializedName("boxes_count") val boxesCount: Int,
+    @SerializedName("location_type") val locationType: String,
+    @SerializedName("total_price_toman") val totalPriceToman: Long,
+    val status: String,
+    val note: String?,
+    @SerializedName("created_at") val createdAt: String?
+)
+
+data class AdOrderResponse(
+    val order: AdOrderDto,
+    @SerializedName("support_whatsapp") val supportWhatsapp: String?,
+    @SerializedName("payment_info") val paymentInfo: String?
+)
+
+data class AdOrdersResponse(val orders: List<AdOrderDto>)
+
 interface LizooApi {
     @POST("auth/request-otp")
     suspend fun requestOtp(@Body body: RequestOtpBody): Response<OtpResponse>
@@ -132,4 +185,22 @@ interface LizooApi {
     suspend fun requestSettlement(
         @Body body: SettlementRequestBody
     ): Response<SettlementResponse>
+
+    @PUT("users/me/bank")
+    suspend fun saveBank(@Body body: BankBody): Response<UserResponse>
+
+    @POST("users/me/id-document")
+    suspend fun uploadDoc(@Body body: DocBody): Response<UserResponse>
+
+    @GET("earnings/week")
+    suspend fun week(): Response<WeekDto>
+
+    @GET("ads/prices")
+    suspend fun adPrices(): Response<AdPricesDto>
+
+    @POST("ads/orders")
+    suspend fun createAd(@Body body: AdOrderBody): Response<AdOrderResponse>
+
+    @GET("ads/orders/mine")
+    suspend fun myAds(): Response<AdOrdersResponse>
 }

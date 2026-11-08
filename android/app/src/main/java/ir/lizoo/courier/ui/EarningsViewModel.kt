@@ -7,6 +7,7 @@ import ir.lizoo.courier.data.ApiResult
 import ir.lizoo.courier.data.Graph
 import ir.lizoo.courier.data.SettlementDto
 import ir.lizoo.courier.data.SummaryDto
+import ir.lizoo.courier.data.WeekDto
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,13 +18,14 @@ data class EarningsUi(
     val loading: Boolean = true,
     val busy: Boolean = false,
     val summary: SummaryDto? = null,
+    val week: WeekDto? = null,
     val settlements: List<SettlementDto> = emptyList(),
     val error: String? = null,
     val info: String? = null
 )
 
 fun settlementError(code: String): String = when (code) {
-    "below_minimum" -> "مبلغ قابل برداشت کمتر از حداقل تسویه است"
+    "below_minimum" -> "مبلغ کمتر از حداقل تسویه است"
     "insufficient_balance" -> "موجودی قابل برداشت کافی نیست"
     "open_request_exists" -> "یک درخواست تسویه در جریان داری"
     "invalid_amount" -> "مبلغ نامعتبر است"
@@ -47,6 +49,7 @@ class EarningsViewModel(app: Application) : AndroidViewModel(app) {
     private suspend fun load() {
         val s = repo.summary()
         val l = repo.mySettlements()
+        val w = repo.week()
         _ui.update {
             var next = it.copy(loading = false)
             when (s) {
@@ -54,15 +57,16 @@ class EarningsViewModel(app: Application) : AndroidViewModel(app) {
                 is ApiResult.Fail -> next = next.copy(error = settlementError(s.error))
             }
             if (l is ApiResult.Ok) next = next.copy(settlements = l.data.settlements)
+            if (w is ApiResult.Ok) next = next.copy(week = w.data)
             next
         }
     }
 
-    fun request() {
+    fun request(amount: Long?) {
         if (_ui.value.busy) return
         _ui.update { it.copy(busy = true, error = null, info = null) }
         viewModelScope.launch {
-            when (val r = repo.requestSettlement()) {
+            when (val r = repo.requestSettlement(amount)) {
                 is ApiResult.Ok -> {
                     _ui.update { it.copy(info = "درخواست تسویه ثبت شد") }
                     load()

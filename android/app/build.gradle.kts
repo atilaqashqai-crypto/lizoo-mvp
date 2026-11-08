@@ -11,8 +11,8 @@ android {
         applicationId = "ir.lizoo.courier"
         minSdk = 24
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "2.0"
 
         val baseUrl = (project.findProperty("BASE_URL") as String?) ?: "http://10.0.2.2:3000/"
         buildConfigField("String", "BASE_URL", "\"$baseUrl\"")

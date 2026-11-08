@@ -24,6 +24,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -36,14 +39,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 @Composable
 fun AppRoot(vm: AuthViewModel = viewModel()) {
     val s by vm.state.collectAsState()
+    var route by rememberSaveable { mutableStateOf(Route.Home) }
     when (s.stage) {
         Stage.Loading -> LoadingScreen(s, vm)
         Stage.Phone -> PhoneScreen(s, vm)
         Stage.Otp -> OtpScreen(s, vm)
         Stage.Profile -> ProfileScreen(s, vm)
-        Stage.Status ->
-            if (s.user?.status == "approved") HomeScreen(onLogout = vm::logout)
-            else StatusScreen(s, vm)
+        Stage.Main -> MainShell(s, vm, route) { route = it }
     }
 }
 
@@ -64,7 +66,7 @@ internal fun Page(title: String, content: @Composable ColumnScope.() -> Unit) {
 }
 
 @Composable
-private fun Field(
+internal fun Field(
     value: String,
     onChange: (String) -> Unit,
     label: String,
@@ -87,10 +89,15 @@ private fun Field(
 }
 
 @Composable
-internal fun PrimaryButton(text: String, busy: Boolean, onClick: () -> Unit) {
+internal fun PrimaryButton(
+    text: String,
+    busy: Boolean,
+    enabled: Boolean = true,
+    onClick: () -> Unit
+) {
     Button(
         onClick = onClick,
-        enabled = !busy,
+        enabled = !busy && enabled,
         modifier = Modifier
             .fillMaxWidth()
             .height(50.dp)
@@ -172,38 +179,15 @@ private fun ProfileScreen(s: UiState, vm: AuthViewModel) {
         Field(s.city, vm::onCity, "شهر")
         Spacer(Modifier.height(12.dp))
         Field(s.plate, vm::onPlate, "پلاک موتور")
+        Spacer(Modifier.height(12.dp))
+        Field(s.username, vm::onUsername, "نام کاربری (انگلیسی، اختیاری)", ltr = true)
         ErrorLine(s.error)
         Spacer(Modifier.height(16.dp))
         PrimaryButton("ثبت اطلاعات", s.busy) { vm.saveProfile() }
-        TextButton(onClick = { vm.logout() }) { Text("خروج از حساب") }
-    }
-}
-
-@Composable
-private fun StatusScreen(s: UiState, vm: AuthViewModel) {
-    val user = s.user
-    Page(user?.fullName ?: "وضعیت حساب") {
-        when (user?.status) {
-            "rejected" -> {
-                Text("درخواست تو رد شده است.", color = MaterialTheme.colorScheme.error)
-                Spacer(Modifier.height(8.dp))
-                Text("اطلاعات را اصلاح کن و دوباره ارسال کن.")
-                Spacer(Modifier.height(16.dp))
-                PrimaryButton("ویرایش و ارسال مجدد", s.busy) { vm.editProfile() }
-            }
-            else -> {
-                Text("درخواست تو در انتظار تأیید مدیر لیزو است.", fontWeight = FontWeight.Bold)
-                Spacer(Modifier.height(8.dp))
-                Text("بعد از تأیید، وضعیت را دوباره بررسی کن.")
-            }
+        if (s.user?.profileComplete == true) {
+            TextButton(onClick = { vm.cancelEdit() }) { Text("انصراف") }
+        } else {
+            TextButton(onClick = { vm.cancelEdit() }) { Text("بعداً") }
         }
-        ErrorLine(s.error)
-        Spacer(Modifier.height(16.dp))
-        OutlinedButton(
-            onClick = { vm.refresh() },
-            enabled = !s.busy,
-            modifier = Modifier.fillMaxWidth()
-        ) { Text("بررسی وضعیت") }
-        TextButton(onClick = { vm.logout() }) { Text("خروج از حساب") }
     }
 }

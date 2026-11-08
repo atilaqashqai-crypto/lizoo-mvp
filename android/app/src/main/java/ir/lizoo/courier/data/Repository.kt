@@ -24,7 +24,8 @@ class Repository(private val tokens: TokenStore) {
             chain.proceed(builder.build())
         }
         .connectTimeout(20, TimeUnit.SECONDS)
-        .readTimeout(20, TimeUnit.SECONDS)
+        .readTimeout(40, TimeUnit.SECONDS)
+        .writeTimeout(60, TimeUnit.SECONDS)
         .build()
 
     private val api: LizooApi = Retrofit.Builder()
@@ -82,8 +83,33 @@ class Repository(private val tokens: TokenStore) {
 
     suspend fun me(): ApiResult<UserResponse> = call { api.me() }
 
-    suspend fun updateProfile(name: String, city: String, plate: String): ApiResult<UserResponse> =
-        call { api.updateProfile(ProfileBody(name, city, plate)) }
+    suspend fun updateProfile(
+        name: String,
+        city: String,
+        plate: String,
+        username: String?
+    ): ApiResult<UserResponse> =
+        call { api.updateProfile(ProfileBody(name, city, plate, username)) }
+
+    suspend fun saveBank(sheba: String, card: String): ApiResult<UserResponse> =
+        call { api.saveBank(BankBody(sheba, card)) }
+
+    suspend fun uploadDoc(base64: String): ApiResult<UserResponse> =
+        call { api.uploadDoc(DocBody(base64)) }
+
+    suspend fun week(): ApiResult<WeekDto> = call { api.week() }
+
+    suspend fun adPrices(): ApiResult<AdPricesDto> = call { api.adPrices() }
+
+    suspend fun createAd(
+        name: String,
+        phone: String,
+        boxes: Int,
+        type: String
+    ): ApiResult<AdOrderResponse> =
+        call { api.createAd(AdOrderBody(name, phone, boxes, type)) }
+
+    suspend fun myAds(): ApiResult<AdOrdersResponse> = call { api.myAds() }
 
     suspend fun startActivity(): ApiResult<ActivityResponse> =
         call { api.startActivity() }
@@ -103,6 +129,6 @@ class Repository(private val tokens: TokenStore) {
     suspend fun mySettlements(): ApiResult<SettlementsResponse> =
         call { api.mySettlements() }
 
-    suspend fun requestSettlement(): ApiResult<SettlementResponse> =
-        call { api.requestSettlement(SettlementRequestBody()) }
+    suspend fun requestSettlement(amount: Long?): ApiResult<SettlementResponse> =
+        call { api.requestSettlement(SettlementRequestBody(amount)) }
 }
