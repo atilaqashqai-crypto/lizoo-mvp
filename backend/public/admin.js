@@ -2,7 +2,7 @@ let token = localStorage.getItem('lizoo_token');
 let courierFilter = 'pending';
 let settleFilter = 'pending';
 let adFilter = 'pending';
-const LOC = { busy: 'پرتردد', normal: 'معمولی', low: 'کم‌تردد' };
+const AD_STATUS = { pending: 'در انتظار تأیید', active: 'در حال انجام', done: 'انجام‌شده', rejected: 'ردشده' };
 
 async function openDoc(userId) {
   try {
@@ -126,23 +126,49 @@ const views = {
   async ads(root) {
     const { orders } = await api('/admin/ads?status=' + adFilter);
     root.append(filterSelect(
-      [['pending', 'در انتظار تایید پرداخت'], ['confirmed', 'تأییدشده'], ['rejected', 'ردشده']],
+      [['pending', 'در انتظار تأیید'], ['active', 'در حال انجام'], ['done', 'انجام‌شده'],
+       ['rejected', 'ردشده'], ['all', 'همه']],
       adFilter, (v) => { adFilter = v; show('ads'); }));
     if (!orders.length) return root.append(el('p', {}, 'موردی نیست'));
     root.append(table(
-      ['تبلیغ‌دهنده', 'تماس', 'تعداد باکس', 'محل', 'مبلغ کل (تومان)', 'تاریخ', 'عملیات'],
+      ['تبلیغ‌دهنده', 'تماس', 'نوع باکس', 'تعداد موتور', 'ساعت', 'مبلغ کل (تومان)', 'وضعیت', 'تاریخ', 'عملیات'],
       orders.map((o) => {
         const ok = el('button', { class: 'ok', onclick: () => {
-          if (confirm('واریز این سفارش تایید شد؟')) act(`/admin/ads/${o.id}/confirm`, {}, 'ads');
+          if (confirm('پرداخت این سفارش تایید شد و تبلیغ همین الان شروع شود؟')) act(`/admin/ads/${o.id}/confirm`, {}, 'ads');
         } }, 'تایید پرداخت');
         const no = el('button', { class: 'bad', onclick: () => {
           const note = prompt('دلیل رد (اختیاری)');
           if (note === null) return;
           act(`/admin/ads/${o.id}/reject`, note ? { note } : {}, 'ads');
         } }, 'رد');
-        return [o.advertiser_name, o.contact_phone, fmt(o.boxes_count), LOC[o.location_type] || o.location_type,
-          fmt(o.total_price_toman), fmtDate(o.created_at),
+        return [o.advertiser_name, o.contact_phone, o.box_name, fmt(o.motors_count), fmt(o.hours),
+          fmt(o.total_price_toman), AD_STATUS[o.shown_status] || o.shown_status, fmtDate(o.created_at),
           el('div', { class: 'row' }, o.status === 'pending' ? [ok, no] : [])];
+      })));
+  },
+
+  async boxes(root) {
+    const { box_types } = await api('/admin/ads/box-types');
+    root.append(el('p', {}, 'قیمت هر ساعت، ساعت پیش‌فرض و تعداد موتور موجود برای هر نوع باکس را تنظیم کن.'));
+    root.append(table(
+      ['نوع باکس', 'قیمت هر ساعت (تومان)', 'ساعت پیش‌فرض', 'تعداد موتور موجود', 'فعال', ''],
+      box_types.map((b) => {
+        const name = el('input', { type: 'text', value: b.name });
+        const price = el('input', { type: 'number', value: b.price_per_hour_toman });
+        const hours = el('input', { type: 'number', value: b.hours_default });
+        const stock = el('input', { type: 'number', value: b.available_count });
+        const active = el('input', { type: 'checkbox' });
+        active.checked = b.active;
+        const save = el('button', { class: 'ok', onclick: async () => {
+          try {
+            await api('/admin/ads/box-types/' + b.id, 'PUT', {
+              name: name.value, price_per_hour_toman: price.value,
+              hours_default: hours.value, available_count: stock.value, active: active.checked,
+            });
+            show('boxes');
+          } catch (e) { alert('ورودی نامعتبر است'); }
+        } }, 'ذخیره');
+        return [name, price, hours, stock, active, save];
       })));
   },
 
@@ -196,15 +222,13 @@ const views = {
       ['idle_minutes', 'قطع خودکار بعد از (دقیقه)'],
       ['idle_radius_m', 'شعاع ثابت‌ماندن (متر)'],
       ['min_settlement_toman', 'حداقل مبلغ تسویه (تومان)'],
-      ['ad_price_busy', 'قیمت هر باکس تبلیغاتی: منطقه پرتردد (تومان)'],
-      ['ad_price_normal', 'قیمت هر باکس تبلیغاتی: منطقه معمولی (تومان)'],
-      ['ad_price_low', 'قیمت هر باکس تبلیغاتی: منطقه کم‌تردد (تومان)'],
       ['support_whatsapp', 'شماره واتساپ پشتیبانی (مثلاً 98912xxxxxxx)', 'text'],
+      ['payment_info', 'اطلاعات حساب‌های لیزو برای واریز (متن)', 'text'],
     ];
     const inputs = {};
     for (const [k, label, kind] of fields) {
       inputs[k] = el('input', { type: kind || 'number', value: settings[k] ?? '' });
-      if (kind === 'text') inputs[k].setAttribute('dir', 'ltr');
+      if (k === 'support_whatsapp') inputs[k].setAttribute('dir', 'ltr');
       root.append(el('label', {}, label), inputs[k]);
     }
     root.append(el('div', { class: 'row' }, el('button', { class: 'pri', onclick: async () => {
@@ -218,7 +242,7 @@ const views = {
 
 const tabs = [
   ['stats', 'خانه'], ['couriers', 'پیک‌ها'], ['settlements', 'تسویه‌ها'],
-  ['ads', 'سفارش تبلیغ'], ['zones', 'مناطق'], ['settings', 'تنظیمات'],
+  ['ads', 'سفارش تبلیغ'], ['boxes', 'انواع باکس'], ['zones', 'مناطق'], ['settings', 'تنظیمات'],
 ];
 
 async function show(name) {

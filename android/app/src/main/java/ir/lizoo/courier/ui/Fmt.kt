@@ -53,15 +53,20 @@ internal fun settlementStatusLabel(status: String): String = when (status) {
 }
 
 internal fun adStatusLabel(status: String): String = when (status) {
-    "pending" -> "در انتظار تأیید پرداخت"
-    "confirmed" -> "تأیید شد"
+    "pending" -> "در حال تأیید"
+    "active" -> "در حال انجام"
+    "done" -> "انجام شده"
     "rejected" -> "رد شد"
     else -> status
 }
 
-internal fun locationLabel(type: String): String = when (type) {
-    "busy" -> "منطقه پرتردد"
-    "normal" -> "منطقه معمولی"
-    "low" -> "منطقه کم‌تردد"
-    else -> type
+internal fun fmtRemaining(seconds: Long): String {
+    val s = seconds.coerceAtLeast(0)
+    val h = s / 3600
+    val m = (s % 3600) / 60
+    return when {
+        h > 0 && m > 0 -> "${fmtMoney(h)} ساعت و ${fmtMoney(m)} دقیقه"
+        h > 0 -> "${fmtMoney(h)} ساعت"
+        else -> "${fmtMoney(m.coerceAtLeast(1))} دقیقه"
+    }
 }

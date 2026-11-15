@@ -99,17 +99,18 @@ class Repository(private val tokens: TokenStore) {
 
     suspend fun week(): ApiResult<WeekDto> = call { api.week() }
 
-    suspend fun adPrices(): ApiResult<AdPricesDto> = call { api.adPrices() }
+    suspend fun boxTypes(): ApiResult<BoxTypesResponse> = call { api.boxTypes() }
 
-    suspend fun createAd(
+    suspend fun createMotorOrder(
         name: String,
         phone: String,
-        boxes: Int,
-        type: String
-    ): ApiResult<AdOrderResponse> =
-        call { api.createAd(AdOrderBody(name, phone, boxes, type)) }
+        boxCode: String,
+        motors: Int,
+        hours: Int
+    ): ApiResult<MotorOrderResponse> =
+        call { api.createMotorOrder(MotorOrderBody(name, phone, boxCode, motors, hours)) }
 
-    suspend fun myAds(): ApiResult<AdOrdersResponse> = call { api.myAds() }
+    suspend fun myMotorOrders(): ApiResult<MotorOrdersResponse> = call { api.myMotorOrders() }
 
     suspend fun startActivity(): ApiResult<ActivityResponse> =
         call { api.startActivity() }

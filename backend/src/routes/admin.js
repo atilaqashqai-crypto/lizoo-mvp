@@ -145,7 +145,10 @@ const LIMITS = {
   ad_price_normal: [0, 1000000000],
   ad_price_low: [0, 1000000000],
 };
-const TEXT_KEYS = { support_whatsapp: /^\+?\d{0,15}$/ };
+const TEXT_KEYS = {
+  support_whatsapp: /^\+?\d{0,15}$/,
+  payment_info: /^[\s\S]{0,500}$/,
+};
 
 router.get('/settings', guard, async (req, res) => {
   try {

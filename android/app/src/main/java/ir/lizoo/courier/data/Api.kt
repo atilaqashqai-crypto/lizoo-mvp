@@ -115,37 +115,50 @@ data class WeekDto(
     @SerializedName("total_seconds") val totalSeconds: Long
 )
 
-data class AdPricesDto(
-    val prices: Map<String, Long>,
+data class BoxTypeDto(
+    val id: Long,
+    val code: String,
+    val name: String,
+    @SerializedName("price_per_hour_toman") val pricePerHourToman: Long,
+    @SerializedName("hours_default") val hoursDefault: Int,
+    val available: Int
+)
+
+data class BoxTypesResponse(
+    @SerializedName("box_types") val boxTypes: List<BoxTypeDto>,
     @SerializedName("support_whatsapp") val supportWhatsapp: String?,
     @SerializedName("payment_info") val paymentInfo: String?
 )
 
-data class AdOrderBody(
+data class MotorOrderBody(
     @SerializedName("advertiser_name") val advertiserName: String,
     @SerializedName("contact_phone") val contactPhone: String,
-    @SerializedName("boxes_count") val boxesCount: Int,
-    @SerializedName("location_type") val locationType: String
+    @SerializedName("box_code") val boxCode: String,
+    @SerializedName("motors_count") val motorsCount: Int,
+    val hours: Int
 )
 
-data class AdOrderDto(
+data class MotorOrderDto(
     val id: Long,
     @SerializedName("advertiser_name") val advertiserName: String,
-    @SerializedName("boxes_count") val boxesCount: Int,
-    @SerializedName("location_type") val locationType: String,
+    @SerializedName("box_code") val boxCode: String,
+    @SerializedName("box_name") val boxName: String?,
+    @SerializedName("motors_count") val motorsCount: Int,
+    val hours: Int,
     @SerializedName("total_price_toman") val totalPriceToman: Long,
     val status: String,
     val note: String?,
-    @SerializedName("created_at") val createdAt: String?
+    @SerializedName("created_at") val createdAt: String?,
+    @SerializedName("remaining_seconds") val remainingSeconds: Long
 )
 
-data class AdOrderResponse(
-    val order: AdOrderDto,
+data class MotorOrderResponse(
+    val order: MotorOrderDto,
     @SerializedName("support_whatsapp") val supportWhatsapp: String?,
     @SerializedName("payment_info") val paymentInfo: String?
 )
 
-data class AdOrdersResponse(val orders: List<AdOrderDto>)
+data class MotorOrdersResponse(val orders: List<MotorOrderDto>)
 
 interface LizooApi {
     @POST("auth/request-otp")
@@ -195,12 +208,12 @@ interface LizooApi {
     @GET("earnings/week")
     suspend fun week(): Response<WeekDto>
 
-    @GET("ads/prices")
-    suspend fun adPrices(): Response<AdPricesDto>
+    @GET("ads/box-types")
+    suspend fun boxTypes(): Response<BoxTypesResponse>
 
     @POST("ads/orders")
-    suspend fun createAd(@Body body: AdOrderBody): Response<AdOrderResponse>
+    suspend fun createMotorOrder(@Body body: MotorOrderBody): Response<MotorOrderResponse>
 
     @GET("ads/orders/mine")
-    suspend fun myAds(): Response<AdOrdersResponse>
+    suspend fun myMotorOrders(): Response<MotorOrdersResponse>
 }

@@ -89,7 +89,8 @@ INSERT INTO settings (key, value) VALUES
   ('ad_price_busy', '5000000'),
   ('ad_price_normal', '3000000'),
   ('ad_price_low', '1500000'),
-  ('support_whatsapp', '')
+  ('support_whatsapp', ''),
+  ('payment_info', '')
 ON CONFLICT (key) DO NOTHING;
 
 -- ===== v2 =====
@@ -131,3 +132,43 @@ BEGIN
     INSERT INTO settings (key, value) VALUES ('migr_v2', '1');
   END IF;
 END $$;
+
+-- ===== v3: motor ads (box types + orders) =====
+CREATE TABLE IF NOT EXISTS motor_box_types (
+  id                   SERIAL PRIMARY KEY,
+  code                 VARCHAR(20) UNIQUE NOT NULL,
+  name                 VARCHAR(60) NOT NULL,
+  price_per_hour_toman BIGINT NOT NULL DEFAULT 0,
+  hours_default        INT NOT NULL DEFAULT 2,
+  available_count      INT NOT NULL DEFAULT 0,
+  active               BOOLEAN NOT NULL DEFAULT TRUE,
+  sort                 INT NOT NULL DEFAULT 0
+);
+INSERT INTO motor_box_types (code, name, price_per_hour_toman, hours_default, available_count, sort)
+VALUES
+  ('transparent', 'موتور با باکس شفاف', 50000, 2, 5, 1),
+  ('moving',      'موتور با باکس متحرک', 55000, 3, 3, 2),
+  ('tv',          'موتور با باکس تلویزیون', 60000, 4, 2, 3),
+  ('fixed',       'موتور با باکس ثابت', 45000, 2, 5, 4)
+ON CONFLICT (code) DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS motor_orders (
+  id                BIGSERIAL PRIMARY KEY,
+  user_id           BIGINT NOT NULL REFERENCES users(id),
+  advertiser_name   VARCHAR(120) NOT NULL,
+  contact_phone     VARCHAR(15) NOT NULL,
+  box_code          VARCHAR(20) NOT NULL REFERENCES motor_box_types(code),
+  motors_count      INT NOT NULL CHECK (motors_count > 0),
+  hours             INT NOT NULL CHECK (hours > 0),
+  unit_price_toman  BIGINT NOT NULL,
+  total_price_toman BIGINT NOT NULL,
+  status            VARCHAR(10) NOT NULL DEFAULT 'pending'
+                    CHECK (status IN ('pending', 'active', 'rejected')),
+  note              TEXT,
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+  started_at        TIMESTAMPTZ,
+  ends_at           TIMESTAMPTZ,
+  reviewed_by       BIGINT REFERENCES users(id)
+);
+CREATE INDEX IF NOT EXISTS idx_motor_orders_user ON motor_orders (user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_motor_orders_status ON motor_orders (status, ends_at);

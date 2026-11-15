@@ -66,6 +66,8 @@ fun errorText(code: String): String = when (code) {
     "invalid_card" -> "شماره کارت معتبر نیست"
     "invalid_image" -> "عکس معتبر نیست، یک عکس دیگر انتخاب کن"
     "price_not_set" -> "قیمت این بخش هنوز تعیین نشده"
+    "not_enough_motors" -> "تعداد موتور درخواستی بیشتر از موجودی است"
+    "invalid_box_type" -> "نوع باکس معتبر نیست"
     "id_document_required" -> "اول عکس کارت ملی یا شناسنامه را در حساب کاربری آپلود کن"
     "bank_info_required" -> "اول شماره شبا و کارت را در حساب کاربری ثبت کن"
     else -> "خطای سرور، دوباره تلاش کن"

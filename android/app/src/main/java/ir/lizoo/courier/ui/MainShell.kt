@@ -38,34 +38,46 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ir.lizoo.courier.R
 
-enum class Route { Home, Drivers, Ads, Ai, Support, Account }
+enum class Route { Home, Drivers, Ads, Ai, Support, Account, Discounts, Messages }
 
 @Composable
 fun MainShell(s: UiState, vm: AuthViewModel, route: Route, onRoute: (Route) -> Unit) {
     BackHandler(enabled = route != Route.Home) { onRoute(Route.Home) }
-    val tab = if (route == Route.Support || route == Route.Account) route else Route.Home
+    val tab = if (route in listOf(Route.Support, Route.Account, Route.Discounts, Route.Messages)) route else Route.Home
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
             NavigationBar(containerColor = Lz.Card) {
                 NavigationBarItem(
-                    selected = tab == Route.Home,
-                    onClick = { onRoute(Route.Home) },
-                    icon = { Text("🏠") },
-                    label = { Text("خانه") }
+                    selected = tab == Route.Discounts,
+                    onClick = { onRoute(Route.Discounts) },
+                    icon = { Text("🏷️") },
+                    label = { Text("تخفیف‌ها", fontSize = 11.sp) }
                 )
                 NavigationBarItem(
                     selected = tab == Route.Support,
                     onClick = { onRoute(Route.Support) },
                     icon = { Text("🎧") },
-                    label = { Text("پشتیبانی") }
+                    label = { Text("پشتیبانی", fontSize = 11.sp) }
                 )
                 NavigationBarItem(
                     selected = tab == Route.Account,
                     onClick = { onRoute(Route.Account) },
                     icon = { Text("👤") },
-                    label = { Text("حساب من") }
+                    label = { Text("پروفایل", fontSize = 11.sp) }
+                )
+                NavigationBarItem(
+                    selected = tab == Route.Messages,
+                    onClick = { onRoute(Route.Messages) },
+                    icon = { Text("💬") },
+                    label = { Text("پیام‌ها", fontSize = 11.sp) }
+                )
+                NavigationBarItem(
+                    selected = tab == Route.Home,
+                    onClick = { onRoute(Route.Home) },
+                    icon = { Text("🏠") },
+                    label = { Text("خانه", fontSize = 11.sp) }
                 )
             }
         }
@@ -75,10 +87,16 @@ fun MainShell(s: UiState, vm: AuthViewModel, route: Route, onRoute: (Route) -> U
             when (route) {
                 Route.Home -> HomeTab(onOpen = onRoute)
                 Route.Drivers -> DriversSection(s, vm, back) { onRoute(Route.Account) }
-                Route.Ads -> AdsScreen(back)
+                Route.Ads -> AdsScreen(back, s.user?.phone.orEmpty())
                 Route.Ai -> AiScreen(back)
                 Route.Support -> SupportScreen()
                 Route.Account -> AccountScreen(s, vm)
+                Route.Discounts -> SectionPage("تخفیف‌ها", null) {
+                    LzCard { Text("به زودی...", color = Lz.AccentSoft, fontWeight = FontWeight.Bold) }
+                }
+                Route.Messages -> SectionPage("پیام‌ها", null) {
+                    LzCard { Text("به زودی...", color = Lz.AccentSoft, fontWeight = FontWeight.Bold) }
+                }
             }
         }
     }
