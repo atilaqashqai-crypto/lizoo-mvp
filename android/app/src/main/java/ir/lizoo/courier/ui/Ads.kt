@@ -5,16 +5,20 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
@@ -32,8 +36,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -43,6 +50,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import ir.lizoo.courier.R
 import ir.lizoo.courier.data.ApiResult
 import ir.lizoo.courier.data.BoxTypeDto
 import ir.lizoo.courier.data.Graph
@@ -184,69 +192,70 @@ private fun AdsHome(onBack: () -> Unit, onSelect: () -> Unit, onOverview: () -> 
     val comingSoon = { soon = true }
 
     SectionPage("📢  ثبت تبلیغ", onBack) {
-        LzCard {
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                VehicleTile("🚚", "کامیون", false, Modifier.weight(1f), comingSoon)
-                VehicleTile("🚗", "اتومبیل", false, Modifier.weight(1f), comingSoon)
-                VehicleTile("🏍️", "موتورسیکلت", true, Modifier.weight(1f), onSelect)
-                VehicleTile("🚙", "وانت", false, Modifier.weight(1f), comingSoon)
-            }
-            Spacer(Modifier.height(10.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                VehicleTile("🏢", "دیوار و نمای ساختمان", false, Modifier.weight(1f), comingSoon)
-                VehicleTile("🖼️", "بنر و استند", false, Modifier.weight(1f), comingSoon)
-                VehicleTile("📄", "سایر", false, Modifier.weight(1f), comingSoon)
-            }
-            if (soon) {
-                Spacer(Modifier.height(10.dp))
-                Text(
-                    "این بخش به‌زودی اضافه می‌شود. فعلاً تبلیغ روی موتور فعال است.",
-                    color = Lz.AccentSoft,
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            VehicleTile(R.drawable.key_truck, false, Modifier.weight(1f), comingSoon)
+            VehicleTile(R.drawable.key_car, false, Modifier.weight(1f), comingSoon)
         }
-        Spacer(Modifier.height(14.dp))
-        ActionCard("📋", "پنل ثبت سفارش", "ثبت سریع و آسان سفارش جدید", onSelect)
         Spacer(Modifier.height(12.dp))
-        ActionCard("⏱️", "سفارشات در حال انجام", "مشاهده وضعیت سفارش‌های شما", onOverview)
-    }
-}
-
-@Composable
-private fun VehicleTile(
-    emoji: String,
-    label: String,
-    enabled: Boolean,
-    modifier: Modifier,
-    onClick: () -> Unit
-) {
-    val shape = RoundedCornerShape(16.dp)
-    Column(
-        modifier = modifier
-            .height(96.dp)
-            .clip(shape)
-            .background(Lz.CardHi)
-            .border(1.dp, if (enabled) Lz.Accent else Lz.Line, shape)
-            .clickable(onClick = onClick)
-            .padding(6.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(emoji, fontSize = 28.sp)
-        Spacer(Modifier.height(4.dp))
-        Text(
-            label,
-            fontSize = 12.sp,
-            textAlign = TextAlign.Center,
-            color = if (enabled) Color.White else Lz.Muted
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            VehicleTile(R.drawable.key_motor, true, Modifier.weight(1f), onSelect)
+            VehicleTile(R.drawable.key_pickup, false, Modifier.weight(1f), comingSoon)
+        }
+        if (soon) {
+            Spacer(Modifier.height(10.dp))
+            Text(
+                "این بخش به‌زودی اضافه می‌شود. فعلاً تبلیغ روی موتور فعال است.",
+                color = Lz.AccentSoft,
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+        Spacer(Modifier.height(16.dp))
+        ActionCard(R.drawable.icon_new_order, "پنل ثبت سفارش", "ثبت سریع و آسان سفارش جدید", onSelect)
+        Spacer(Modifier.height(12.dp))
+        ActionCard(
+            R.drawable.icon_active_orders,
+            "سفارشات در حال انجام",
+            "مشاهده وضعیت سفارش‌های شما",
+            onOverview
         )
-        if (!enabled) Text("به‌زودی", fontSize = 10.sp, color = Lz.AccentSoft)
     }
 }
 
 @Composable
-private fun ActionCard(emoji: String, title: String, subtitle: String, onClick: () -> Unit) {
+private fun VehicleTile(image: Int, enabled: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(18.dp)
+    Box(
+        modifier = modifier
+            .aspectRatio(1f)
+            .clip(shape)
+            .clickable(onClick = onClick)
+    ) {
+        Image(
+            painter = painterResource(image),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .fillMaxSize()
+                .alpha(if (enabled) 1f else 0.6f)
+        )
+        if (!enabled) {
+            Text(
+                "به‌زودی",
+                fontSize = 11.sp,
+                color = Color.White,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 8.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Color(0x990A1020))
+                    .padding(horizontal = 10.dp, vertical = 3.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun ActionCard(image: Int, title: String, subtitle: String, onClick: () -> Unit) {
     val shape = RoundedCornerShape(18.dp)
     Row(
         modifier = Modifier
@@ -255,11 +264,18 @@ private fun ActionCard(emoji: String, title: String, subtitle: String, onClick: 
             .background(Lz.CardHi)
             .border(1.dp, Lz.Accent, shape)
             .clickable(onClick = onClick)
-            .padding(18.dp),
+            .padding(14.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Text(emoji, fontSize = 34.sp)
+        Image(
+            painter = painterResource(image),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .size(64.dp)
+                .clip(RoundedCornerShape(14.dp))
+        )
         Column(modifier = Modifier.weight(1f)) {
             Text(title, fontWeight = FontWeight.Bold, fontSize = 16.sp)
             Text(subtitle, color = Lz.Muted, fontSize = 12.sp)
@@ -270,11 +286,11 @@ private fun ActionCard(emoji: String, title: String, subtitle: String, onClick: 
 
 // ---------------- screen 2: box types + order ----------------
 
-private fun boxEmoji(code: String): String = when (code) {
-    "transparent" -> "🧊"
-    "moving" -> "✨"
-    "tv" -> "📺"
-    else -> "📦"
+private fun boxImage(code: String): Int = when (code) {
+    "transparent" -> R.drawable.box_transparent
+    "moving" -> R.drawable.box_moving
+    "tv" -> R.drawable.box_tv
+    else -> R.drawable.box_fixed
 }
 
 @Composable
@@ -385,10 +401,32 @@ private fun BoxTypeCard(b: BoxTypeDto, selected: Boolean, modifier: Modifier, on
             .padding(12.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(if (selected) "✓" else " ", color = Lz.Accent, fontWeight = FontWeight.Bold)
-        Text("🏍️", fontSize = 34.sp)
-        Text(boxEmoji(b.code), fontSize = 22.sp)
-        Spacer(Modifier.height(6.dp))
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Image(
+                painter = painterResource(boxImage(b.code)),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(1.4f)
+                    .clip(RoundedCornerShape(12.dp))
+                    .alpha(if (soldOut) 0.5f else 1f)
+            )
+            if (selected) {
+                Text(
+                    "✓",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(4.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Lz.Accent)
+                        .padding(horizontal = 8.dp, vertical = 2.dp)
+                )
+            }
+        }
+        Spacer(Modifier.height(8.dp))
         Text(b.name, fontWeight = FontWeight.Bold, fontSize = 13.sp, textAlign = TextAlign.Center)
         Spacer(Modifier.height(8.dp))
         Text("⏱ ${fmtMoney(b.hoursDefault.toLong())} ساعت", fontSize = 12.sp, color = Lz.Muted)

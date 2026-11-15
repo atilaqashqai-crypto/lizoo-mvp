@@ -65,6 +65,7 @@ fun errorText(code: String): String = when (code) {
     "invalid_sheba" -> "شماره شبا معتبر نیست"
     "invalid_card" -> "شماره کارت معتبر نیست"
     "invalid_image" -> "عکس معتبر نیست، یک عکس دیگر انتخاب کن"
+    "not_found" -> "این بخش هنوز روی سرور فعال نشده (سرور را آپدیت کن)"
     "price_not_set" -> "قیمت این بخش هنوز تعیین نشده"
     "not_enough_motors" -> "تعداد موتور درخواستی بیشتر از موجودی است"
     "invalid_box_type" -> "نوع باکس معتبر نیست"
